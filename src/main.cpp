@@ -93,5 +93,27 @@ int main(int argc, char* argv[]) {
     test_algorithm("ST-HOSVD", st_hosvd, X_rand, target_ranks, 1.0);
     test_algorithm("QR ST-HOSVD", qr_st_hosvd, X_rand, target_ranks, 1.0);
 
+    // Test 3: Even worse synthetic
+    torch::Tensor core_diagonal = torch::zeros({10, 10, 10}, options);
+    auto s_vals = torch::pow(10.0, torch::linspace(0, -12, 10, options));
+    for (int i = 0; i < 10; ++i) {
+      core_diagonal[i][i][i] = s_vals[i];
+    }
+
+    std::vector<torch::Tensor> factors;
+    for (int i = 0; i < 3; ++i) {
+      auto qr = torch::linalg_qr(torch::randn({size, 10}, options), "reduced");
+      factors.push_back(std::get<0>(qr));
+    }
+
+    torch::Tensor x = core_diagonal.clone();
+    for (int i = 0; i < 3; ++i) {
+      x = utils::mode_product(x, factors[i], i);
+    }
+
+    test_algorithm("ST-HOSVD", st_hosvd, x, target_ranks, 1e-10);
+    test_algorithm("QR ST-HOSVD", qr_st_hosvd, x, target_ranks, 1e-10);
+
+
     return 0;
 }
