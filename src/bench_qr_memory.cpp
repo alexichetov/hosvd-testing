@@ -67,6 +67,14 @@ int main(int argc, char* argv[]) {
             auto R = qr_givens_inplace(A);
             volatile double d = R[0][0].item<double>();
         }
+        else if (algo == "Torch_QR_reduced") {
+            auto result = torch::linalg_qr(A, "reduced");
+            volatile double d = std::get<1>(result)[0][0].item<double>();
+        }
+        else if (algo == "Torch_QR_r") {
+            auto result = torch::linalg_qr(A, "r");
+            volatile double d = std::get<1>(result)[0][0].item<double>();
+        }
         else {
             std::cerr << "Unknown algo : " << algo << std::endl;
             return 1;

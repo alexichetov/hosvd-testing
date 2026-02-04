@@ -25,7 +25,8 @@ EXPERIMENTS = {
 ALGOS = [
     "CGS", "MGS", "MGS_Inplace",
     "Householder_Explicit", "Householder_Implicit",
-    "Givens_Explicit", "Givens_Inplace"
+    "Givens_Explicit", "Givens_Inplace",
+    "Torch_QR_reduced", "Torch_QR_r"
 ]
 PRECISIONS = ["float", "double"]
 
@@ -42,6 +43,8 @@ def run_benchmark():
             for prec in PRECISIONS:
                 for algo in ALGOS:
                     try:
+                        print(f"{algo:<25} | {m}x{n:<5} | {prec:<8} | ", end="", flush=True)
+
                         cmd = [BINARY_PATH, algo, str(m), str(n), prec]
                         start_time = time.time()
                         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -53,6 +56,8 @@ def run_benchmark():
                         peak_mb = float(parts[4])
                         baseline_mb = float(parts[5])
                         aux_mb = max(0.0, peak_mb - baseline_mb)
+
+                        print(f"{peak_mb:.2f}")
 
                         results.append({
                             "Exp": exp_name,
@@ -76,7 +81,9 @@ def plot_exp(df, exp_name):
         "Householder_Explicit": {"color": "#9467bd", "marker": "d"},
         "Householder_Implicit": {"color": "#1f77b4", "marker": "s"},
         "Givens_Explicit":      {"color": "#8c564b", "marker": "*"},
-        "Givens_Inplace":       {"color": "#e377c2", "marker": "v"}
+        "Givens_Inplace":       {"color": "#e377c2", "marker": "v"},
+        "Torch_QR_reduced":     {"color": "#AAAAAA", "marker": "p"},
+        "Torch_QR_r":           {"color": "#444444", "marker": "p"},
     }
 
     subset_exp = df[df["Exp"] == exp_name]
@@ -121,4 +128,4 @@ if __name__ == "__main__":
     if not df.empty:
         plot_exp(df, "Square")
         plot_exp(df, "Tall-Skinny")
-    plt.show()
+    #plt.show()
