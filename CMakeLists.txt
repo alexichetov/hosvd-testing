@@ -41,3 +41,7 @@ target_link_libraries(ls_stability "${TORCH_LIBRARIES}")
 # QR-SVD Paper Numerical Stability Reproduction
 add_executable(bench_qr_svd_reproduction src/bench_qr_svd_reproduction.cpp ${LIB_SOURCES})
 target_link_libraries(bench_qr_svd_reproduction "${TORCH_LIBRARIES}")
+
+# Compression and Reconstruction Benchmark
+add_executable(bench_compression src/bench_compression.cpp ${LIB_SOURCES})
+target_link_libraries(bench_compression "${TORCH_LIBRARIES}")
