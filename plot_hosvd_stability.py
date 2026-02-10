@@ -8,13 +8,13 @@ import numpy as np
 
 # Configuration
 BINARY_PATH = "./build/bench_hosvd_stability"
-NUM_RUNS = 25
+NUM_RUNS = 1
 EPS_FLOAT = 1.19209e-07
 EPS_DOUBLE = 2.22044e-16
 TENSOR_SIZE = 32
 TARGET_RANKS = [3, 6, 9, 10]
 
-def run_batch(precision_flag, size, rank, runs=25):
+def run_batch(precision_flag, size, rank, runs=1):
     print(f"Starting batch: {precision_flag} | Size: {size} | Rank: {rank} ({runs} runs)...")
 
     if not os.path.exists(BINARY_PATH):
