@@ -145,28 +145,25 @@ torch::Tensor qr_mgs(const torch::Tensor& A_in) {
 torch::Tensor qr_mgs_inplace(torch::Tensor& A) {
     int64_t m = A.size(0);
     int64_t n = A.size(1);
+
     torch::Tensor R = torch::zeros({n, n}, A.options());
 
-    // Iterate through each column
     for (int64_t k = 0; k < n; ++k) {
-        // Compute norm of current column
-        double r_kk = torch::norm(A.index({Slice(), k})).item<double>();
+        torch::Tensor q_k = A.index({Slice(), k});
+        double r_kk = torch::norm(q_k).item<double>();
         R.index_put_({k, k}, r_kk);
 
-        // Overwrite A with Q step by step (normalize column)
         if (r_kk != 0) {
-            A.index_put_({Slice(), k}, A.index({Slice(), k}) / r_kk);
+            q_k.div_(r_kk);
         }
 
-        // Update remaining columns
         for (int64_t j = k + 1; j < n; ++j) {
-            // Calculate projection coefficients
-            // Note: A(:,k) is now q_k
-            double r_kj = torch::dot(A.index({Slice(), k}), A.index({Slice(), j})).item<double>();
+            torch::Tensor v_j = A.index({Slice(), j});
+
+            double r_kj = torch::dot(q_k, v_j).item<double>();
             R.index_put_({k, j}, r_kj);
 
-            // Orthogonalize remaining columns against current Q column
-            A.index_put_({Slice(), j}, A.index({Slice(), j}) - A.index({Slice(), k}) * r_kj);
+            v_j.add_(q_k, -r_kj);
         }
     }
 
@@ -210,7 +207,6 @@ torch::Tensor qr_householder_explicit(const torch::Tensor& A_in) {
 torch::Tensor qr_householder_implicit(torch::Tensor& A) {
     int64_t m = A.size(0);
     int64_t n = A.size(1);
-
     int64_t steps = std::min(m, n);
 
     for (int64_t j = 0; j < steps; ++j) {
@@ -219,12 +215,15 @@ torch::Tensor qr_householder_implicit(torch::Tensor& A) {
         torch::Tensor v = std::get<0>(result);
         double beta = std::get<1>(result);
 
-        torch::Tensor sub_matrix = A.index({Slice(j, m), Slice(j, n)});
-        torch::Tensor v_view = v.view({-1, 1});
-        torch::Tensor v_dot_A = torch::matmul(v_view.t(), sub_matrix);
-        torch::Tensor update = beta * torch::matmul(v_view, v_dot_A);
+        if (beta != 0.0) {
+            torch::Tensor sub_matrix = A.index({Slice(j, m), Slice(j, n)});
 
-        A.index_put_({Slice(j, m), Slice(j, n)}, sub_matrix - update);
+            torch::Tensor v_view = v.view({-1, 1});
+
+            torch::Tensor w = torch::matmul(v_view.t(), sub_matrix);
+
+            sub_matrix.addmm_(v_view, w, /*beta=*/1.0, /*alpha=*/-beta);
+        }
 
         if (j < m - 1) {
             A.index_put_({Slice(j + 1, m), j}, v.index({Slice(1, m - j)}));
@@ -279,21 +278,25 @@ torch::Tensor qr_givens_inplace(torch::Tensor& A) {
 
     for (int64_t j = 0; j < n; ++j) {
         for (int64_t i = m - 1; i > j; --i) {
-            double a_top = A.index({i - 1, j}).item<double>();
-            double a_bot = A.index({i, j}).item<double>();
+            double a_top = A[i - 1][j].item<double>();
+            double a_bot = A[i][j].item<double>();
+
+            if (a_bot == 0.0) continue;
 
             auto params = givens(a_top, a_bot);
             double c = std::get<0>(params);
             double s = std::get<1>(params);
 
-            torch::Tensor row_top = A.index({i - 1, Slice(j, n)});
-            torch::Tensor row_bot = A.index({i, Slice(j, n)});
+            auto row_top = A.index({i - 1, Slice(j, n)});
+            auto row_bot = A.index({i, Slice(j, n)});
 
-            torch::Tensor new_top = c * row_top - s * row_bot;
-            torch::Tensor new_bot = s * row_top + c * row_bot;
+            torch::Tensor top_copy = row_top.clone();
+            torch::Tensor bot_copy = row_bot.clone();
 
-            A.index_put_({i - 1, Slice(j, n)}, new_top);
-            A.index_put_({i, Slice(j, n)}, new_bot);
+            row_top.copy_(top_copy).mul_(c).add_(bot_copy, -s);
+
+            row_bot.copy_(top_copy).mul_(s).add_(bot_copy, c);
+
             A.index_put_({i, j}, 0.0);
         }
     }

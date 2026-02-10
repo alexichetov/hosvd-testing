@@ -35,5 +35,9 @@ add_executable(bench_hosvd_stability src/bench_hosvd_stability.cpp ${LIB_SOURCES
 target_link_libraries(bench_hosvd_stability "${TORCH_LIBRARIES}")
 
 # Least-Squares Gram vs QR
-add_executable(ls_stability src/ls_stability.cpp)
+add_executable(ls_stability src/ls_stability.cpp ${LIB_SOURCES})
 target_link_libraries(ls_stability "${TORCH_LIBRARIES}")
+
+# QR-SVD Paper Numerical Stability Reproduction
+add_executable(bench_qr_svd_reproduction src/bench_qr_svd_reproduction.cpp ${LIB_SOURCES})
+target_link_libraries(bench_qr_svd_reproduction "${TORCH_LIBRARIES}")
